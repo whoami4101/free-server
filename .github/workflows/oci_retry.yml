@@ -1,0 +1,65 @@
+name: OCI ARM Grabber
+
+on:
+  schedule:
+    - cron: '*/5 * * * *'    # Trigger every 5 minutes (Needed only after job runs for 6 hours)
+  workflow_dispatch:          # Manual trigger enabled
+
+concurrency:
+  group: oci-retry            # Only one job allowed per group
+  cancel-in-progress: false   # Do not cancel running jobs; new ones will queue (max 1 running + 1 waiting)
+
+jobs:
+  retry:
+    runs-on: ubuntu-latest
+    timeout-minutes: 355      # Near GitHub Actions 6-hour limit
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install OCI SDK
+        run: pip install oci
+
+      - name: Set up OCI credentials
+        env:
+          OCI_USER:        ${{ secrets.OCI_USER }}
+          OCI_FINGERPRINT: ${{ secrets.OCI_FINGERPRINT }}
+          OCI_TENANCY:     ${{ secrets.OCI_TENANCY }}
+          OCI_REGION:      ${{ secrets.OCI_REGION }}
+          OCI_PRIVATE_KEY: ${{ secrets.OCI_PRIVATE_KEY }}
+        run: |
+          mkdir -p ~/.oci
+
+          # Write API private key
+          printf '%s' "$OCI_PRIVATE_KEY" > ~/.oci/oci_api_key.pem
+          chmod 600 ~/.oci/oci_api_key.pem
+
+          # Write config (key_file uses absolute path)
+          cat > ~/.oci/config << EOF
+          [DEFAULT]
+          user=$OCI_USER
+          fingerprint=$OCI_FINGERPRINT
+          tenancy=$OCI_TENANCY
+          region=$OCI_REGION
+          key_file=/home/runner/.oci/oci_api_key.pem
+          EOF
+
+      - name: Run OCI retry script
+        # timeout 21000 = 350 minutes (~5.8 hours), ends gracefully before job limit
+        # Script retries every 90 seconds, ~233 attempts
+        # After successful instance creation, script exits early
+        # New job triggered by cron every 5 mins, minimal gap
+        env:
+          PYTHONUNBUFFERED: "1"
+          OCI_COMPARTMENT_ID: ${{ secrets.OCI_COMPARTMENT_ID }}
+          OCI_SSH_PUBLIC_KEY: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
+          OCI_BOOT_VOLUME_ID: ${{ secrets.OCI_BOOT_VOLUME_ID }}
+          OCI_OCPUS: "2"
+          OCI_MEMORY_GBS: "12"
+        run: timeout 21000 python oci_retry.py || true
