@@ -51,7 +51,7 @@ BOOT_VOLUME_ID = os.environ.get("OCI_BOOT_VOLUME_ID", "").strip()
 OCPUS = int(os.environ.get("OCI_OCPUS", "2"))
 MEMORY_IN_GBS = int(os.environ.get("OCI_MEMORY_GBS", "12"))
 
-RETRY_INTERVAL = int(os.environ.get("OCI_RETRY_INTERVAL", "77"))  # Seconds
+RETRY_INTERVAL = int(os.environ.get("OCI_RETRY_INTERVAL", "90"))  # Seconds
 # --------------------------------------------------------
 
 if not COMPARTMENT_ID:
