@@ -59,7 +59,13 @@ jobs:
           PYTHONUNBUFFERED: "1"
           OCI_COMPARTMENT_ID: ${{ secrets.OCI_COMPARTMENT_ID }}
           OCI_SSH_PUBLIC_KEY: ${{ secrets.OCI_SSH_PUBLIC_KEY }}
-          OCI_BOOT_VOLUME_ID: ${{ secrets.OCI_BOOT_VOLUME_ID }}
-          OCI_OCPUS: "2"
-          OCI_MEMORY_GBS: "12"
+          # Grab small first, then auto-upgrade.
+          OCI_OCPUS: "1"
+          OCI_MEMORY_GBS: "6"
+          OCI_RESIZE_TARGET_OCPUS: "2"
+          OCI_RESIZE_TARGET_MEMORY_GBS: "12"
+          OCI_TOO_MANY_REQUESTS_WAIT: "600"
+          # Telegram notifications.
+          TELEGRAM_BOT_TOKEN: ${{ secrets.TELEGRAM_BOT_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: timeout 21000 python oci_retry.py || true
